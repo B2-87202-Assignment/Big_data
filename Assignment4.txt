@@ -1,0 +1,190 @@
+1. Upload busstops.json data into HDFS directory. Then create hive external table to fetch data using JsonSerDe.
+    ```
+    {"_id":{"$oid":"5a0720b478597fc11004d951"},"stop":"Non-BRTS","code":"103B-D-04","seq":4.0,"stage":1.0,"name":"Aranyeshwar Corner","location":{"type":"Point","coordinates":[73.857675,18.486381]}}
+    ```
+    ``` 
+    location STRUCT<type:STRING, coordinates:ARRAY<DOUBLE>>
+    ```
+    ```
+    When column-name have special charatcters like _ or $, they should be encapsulated in `back-quotes`.
+    ```
+sunbeam@sunbeam:~$ hadoop fs -mkdir -p /user/$USER/busstops/input
+sunbeam@sunbeam:~$ hadoop fs -put /home/sunbeam/Desktop/Sunbeam/BigData_Practise/busstops.json /user/$USER/busstops/input
+sunbeam@sunbeam:~$ hadoop fs -ls /user/$USER/busstops/input
+Found 1 items
+-rw-r--r--   1 sunbeam supergroup        195 2024-12-19 17:48 /user/sunbeam/busstops/input/busstops.json
+sunbeam@sunbeam:~$ 
+0: jdbc:hive2://localhost:10000/default> create table busstops(
+. . . . . . . . . . . . . . . . . . . .> `_id` struct<`$oid`:string>,
+. . . . . . . . . . . . . . . . . . . .> stops string,
+. . . . . . . . . . . . . . . . . . . .> code string ,
+. . . . . . . . . . . . . . . . . . . .> seq double ,
+. . . . . . . . . . . . . . . . . . . .> stage double ,
+. . . . . . . . . . . . . . . . . . . .> name string ,
+. . . . . . . . . . . . . . . . . . . .> location struct <type: string ,coordinates:array <double>>)
+. . . . . . . . . . . . . . . . . . . .> row format serde 'org.apache.hadoop.hive.serde2.RegexSerDe'
+. . . . . . . . . . . . . . . . . . . .> stored as textfile
+. . . . . . . . . . . . . . . . . . . .> location '/user/sunbeam/busstops/input'
+. . . . . . . . . . . . . . . . . . . .> ;
+____________________________
+2. Execute following queries on MySQL emp database using Recursive CTEs (not supported in Hive 3.x).
+    1. Find years in range 1975 to 1985, where no emps were hired.
+    2. Display emps with their level in emp hierarchy. Level employee is Level of his manager + 1.
+    3. Create a "newemp" table with foreign constraints enabled for "mgr" column. Also enable DELETE ON CASCADE for the same. Insert data into the table from emp table. Hint: You need to insert data levelwise to avoid FK constraint error.
+    4. From "newemp" table, delete employee KING. What is result?
+____________________________________________________________
+3. Load Fire data into Hive in a staging table "fire_staging".
+create external table fire_staging(
+    Call_Number int,
+    Unit_ID int,
+    Incident_Number int,
+    Call_Type string,
+    Call_Date date,
+    Watch_Date date,
+    Received_DtTm string,
+    Entry_DtTm string,
+    Dispatch_DtTm string,
+    Response_DtTm string,
+    On_Scene_DtTm string,
+    Transport_DtTm string,
+    Hospital_DtTm string,
+    Call_Final_Disposition string,
+    Available_DtTm string,
+    Address string,
+    City string,
+    Zipcode_of_Incident int ,
+    Battalion string,
+    Station_Area int,
+    Box int,
+    Original_Priority int,
+    Priority int,
+    Final_Priority int,
+    ALS_Unit string,
+    Call_Type_Group string,
+    Number_of_Alarms int,
+    Unit_Type string,
+    Unit_sequence_in_call_dispatch int,
+    Fire_Prevention_District int,
+    Supervisor_District int,
+    Neighborhooods_Analysis_Boundaries string,
+    RowID string,
+    case_location string,
+    data_as_of string,
+    data_loaded_at string,
+    Analysis_Neighborhoods int
+
+)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+STORED AS TEXTFILE
+LOCATION '/user/sunbeam/fire/input'
+TBLPROPERTIES ('skip.header.line.count'='1');
+
+
+Call Number,Unit ID,Incident Number,Call Type,Call Date,Watch Date,Received DtTm,Entry DtTm,Dispatch DtTm,Response DtTm,On Scene DtTm,Transport DtTm,Hospital DtTm,Call Final Disposition,Available DtTm,Address,City,Zipcode of Incident,Battalion,Station Area,Box,Original Priority,Priority,Final Priority,ALS Unit,Call Type Group,Number of Alarms,Unit Type,Unit sequence in call dispatch,Fire Prevention District,Supervisor District,Neighborhooods - Analysis Boundaries,RowID,case_location,data_as_of,data_loaded_at,Analysis Neighborhoods
+
+_______________________________________________________________
+4. Implement Movie recommendation system.
+    * Example Input Data
+        ```
+        userId,movieId,rating,rtime
+        17,70,3,0
+        35,21,1,0
+        49,19,2,0
+        49,21,1,0
+        49,70,4,0
+        87,19,1,0
+        87,21,2,0
+        98,19,2,0
+        ```
+    * Create pairs of movies rated by same user.
+        ```
+0: jdbc:hive2://localhost:10000/default> create table movies_staging(
+. . . . . . . . . . . . . . . . . . . .> userID int ,
+. . . . . . . . . . . . . . . . . . . .> movieID int ,
+. . . . . . . . . . . . . . . . . . . .> rating double, 
+. . . . . . . . . . . . . . . . . . . .> rtime int
+. . . . . . . . . . . . . . . . . . . .> )
+. . . . . . . . . . . . . . . . . . . .> stored as textfile;
+ 
+ 0: jdbc:hive2://localhost:10000/default> insert into table movies_staging values(17,70,3,0),(35,21,1,0),(49,19,2,0),(49,21,1,0),(49,70,4,0),(87,19,1,0),(87,21,2,0),(98,19,2,0);
+0: jdbc:hive2://localhost:10000/default> select * from movies_staging;
++------------------------+-------------------------+------------------------+-----------------------+
+| movies_staging.userid  | movies_staging.movieid  | movies_staging.rating  | movies_staging.rtime  |
++------------------------+-------------------------+------------------------+-----------------------+
+| 17                     | 70                      | 3.0                    | 0                     |
+| 35                     | 21                      | 1.0                    | 0                     |
+| 49                     | 19                      | 2.0                    | 0                     |
+| 49                     | 21                      | 1.0                    | 0                     |
+| 49                     | 70                      | 4.0                    | 0                     |
+| 87                     | 19                      | 1.0                    | 0                     |
+| 87                     | 21                      | 2.0                    | 0                     |
+| 98                     | 19                      | 2.0                    | 0                     |
++------------------------+-------------------------+------------------------+-----------------------+
+8 rows selected (0.217 seconds)        
+        
+        userId,movie1,rating1,movie2,rating2
+        49,21,1.0,70,4.0
+        49,19,2.0,21,1.0
+        49,19,2.0,70,4.0
+        87,19,1.0,21,2.0
+        ```
+0: jdbc:hive2://localhost:10000/default> create table  ratings_staging(
+. . . . . . . . . . . . . . . . . . . .> userID int ,
+. . . . . . . . . . . . . . . . . . . .> movie1 int ,
+. . . . . . . . . . . . . . . . . . . .> rating1 double,
+. . . . . . . . . . . . . . . . . . . .> movie2 int,
+. . . . . . . . . . . . . . . . . . . .> rating2 double)
+. . . . . . . . . . . . . . . . . . . .> stored as orc
+. . . . . . . . . . . . . . . . . . . .> tblproperties('transactional'='true');
+
+
+0: jdbc:hive2://localhost:10000/default> create materialized view mv_movie_corr as
+. . . . . . . . . . . . . . . . . . . .> select movie1,movie2,count(*) cnt ,ROUND(nvl(corr(rating1, rating2),0),2)corr from ratings_staging group by movie1 ,movie2;
+
++-----------------------+-----------------------+--------------------+---------------------+
+| mv_movie_corr.movie1  | mv_movie_corr.movie2  | mv_movie_corr.cnt  | mv_movie_corr.corr  |
++-----------------------+-----------------------+--------------------+---------------------+
+| 19                    | 21                    | 2                  | -1.0                |
+| 19                    | 70                    | 1                  | 0.0                 |
+| 21                    | 70                    | 1                  | 0.0                 |
++-----------------------+-----------------------+--------------------+---------------------+
+3 rows selected (0.166 seconds)
+        
+    * Create correlation table.
+        ```
+        movie1,movie2,cnt,cor
+        19,21,2,-1.0
+        19,70,1,0.0
+        21,70,1,0.0
+        ```
+0: jdbc:hive2://localhost:10000/default> create materialized view mv_movie_corr as
+. . . . . . . . . . . . . . . . . . . .> select movie1,movie2,count(*) cnt ,ROUND(nvl(corr(rating1, rating2),0),2)corr from ratings_staging group by movie1 ,movie2;
+
++-----------------------+-----------------------+--------------------+---------------------+
+| mv_movie_corr.movie1  | mv_movie_corr.movie2  | mv_movie_corr.cnt  | mv_movie_corr.corr  |
++-----------------------+-----------------------+--------------------+---------------------+
+| 19                    | 21                    | 2                  | -1.0                |
+| 19                    | 70                    | 1                  | 0.0                 |
+| 21                    | 70                    | 1                  | 0.0                 |
++-----------------------+-----------------------+--------------------+---------------------+
+3 rows selected (0.166 seconds)        
+    * Predict Similar movies for given movie Id. Get the recommended movies titles from movies table.
+    * Hints
+        * Start with above small data tables to test accuracy of the steps.
+        * You will need to create new intermediate tables to store results of earlier queries.
+        * For main data use ORC format to speed-up the queries.
+        * You may need to change reducer tasks memory for quicker execution and avoid OutOfMemory errors.
+            * SET mapreduce.reduce.memory.mb = 4096;
+            * SET mapreduce.reduce.java.opts = -Xmx4096m;
+    * Input movie id in Python/Java application and show related 5 movies.
+    
+0: jdbc:hive2://localhost:10000/default> select movie1,movie2,count(*) cnt ,ROUND(nvl(corr(rating1, rating2),0),2)corr from ratings_staging group by movie1 ,movie2;
+```+---------+---------+------+-------+
+| movie1  | movie2  | cnt  | corr  |
++---------+---------+------+-------+
+| 19      | 21      | 2    | -1.0  |
+| 19      | 70      | 1    | 0.0   |
+| 21      | 70      | 1    | 0.0   |
++---------+---------+------+-------+
+3 rows selected (16.987 seconds)
+    
